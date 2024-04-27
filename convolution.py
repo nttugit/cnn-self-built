@@ -55,11 +55,40 @@ class Conv2d:
             self.result[row,col] = np.sum(roi * self.kernel)
         return self.result
 
-    
-# conv2d = Conv2d(img_gray,3,2,1)
-conv2d = Conv2d(img_gray,5,padding=4,stride=3)
-img_gray_conv2d = conv2d.operate()
+class Relu:
+    def __init__(self, input):
+        self.input = input
+        self.result = np.zeros((self.input.shape[0], self.input.shape[1]))
 
-plt.imshow(img_gray_conv2d, cmap='gray')
-print(img_gray_conv2d.shape)
+    def operate(self):
+        for row in range(self.input.shape[0]):
+            for col in range(self.input.shape[1]):
+                # relu formula
+                self.result[row,col] = 0 if self.input[row,col] < 0 else self.input[row,col]
+        return self.result
+
+# # conv2d = Conv2d(img_gray,3,2,1)
+# # conv2d = Conv2d(img_gray,5,padding=4,stride=3)
+# conv2d = Conv2d(img_gray,3)
+# img_gray_conv2d = conv2d.operate()
+# plt.imshow(img_gray_conv2d, cmap='gray')
+# # print(img_gray_conv2d.shape)
+# plt.show()
+
+# # Add Relu
+# conv2d_relu = Relu(img_gray_conv2d)
+# img_gray_conv2d_relu = conv2d_relu.operate()
+# plt.imshow(img_gray_conv2d_relu, cmap='gray')
+# # print(img_gray_conv2d.shape)
+# plt.show()
+
+for i in range(9):
+    conv2d = Conv2d(img_gray, 3, padding=2, stride=i+1)
+    img_gray_conv2d = conv2d.operate()
+    conv2d_relu = Relu(img_gray_conv2d)
+    img_gray_conv2d_relu = conv2d_relu.operate()
+
+    plt.subplot(3, 3 , i+ 1)
+    plt.imshow(img_gray_conv2d_relu, cmap='gray')
+    
 plt.show()
