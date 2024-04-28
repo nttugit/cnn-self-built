@@ -126,14 +126,39 @@ class LeakyRelu:
 # plt.savefig('img_gray_conv2d.jpg') 
 # plt.show()
 
+
+class MaxPooling:
+    def __init__(self, input, poolingSize=2):
+        self.input = input
+        self.poolingSize = poolingSize
+        self.result = np.zeros(
+           ( int(self.input.shape[0]/poolingSize),
+            int(self.input.shape[1]/poolingSize),
+            self.input.shape[2])
+        )
+
+    def operate(self):
+        for layer in range(self.input.shape[2]):
+            for row in range(int(self.input.shape[0]/self.poolingSize)):
+                for col in range(int(self.input.shape[1]/self.poolingSize)):
+                    # max pooling formula
+                    self.result[row,col,layer] = np.max(self.input[row * self.poolingSize: row*self.poolingSize + self.poolingSize,
+                                                            col*self.poolingSize: col*self.poolingSize + self.poolingSize,
+                                                            layer
+                                                            ])
+
+        return self.result
+
 conv2d = Conv2d(img_gray, numOfKernel=16, kernel_size=3, padding=0, stride=1)
 img_gray_conv2d = conv2d.operate()
 img_gray_conv2d_relu = Relu(img_gray_conv2d).operate()
-img_gray_conv2d_leaky_relu = LeakyRelu(img_gray_conv2d).operate()
+img_gray_conv2d_leakyrelu = LeakyRelu(img_gray_conv2d).operate()
+img_gray_conv2d_leakyrelu_maxpooling = MaxPooling(img_gray_conv2d_leakyrelu).operate()
+
 
 for i in range(16):
     plt.subplot(4, 4, i + 1)
-    plt.imshow(img_gray_conv2d_leaky_relu[:, :, i], cmap='gray')
+    plt.imshow(img_gray_conv2d_leakyrelu_maxpooling[:, :, i], cmap='gray')
     plt.axis('off')
-plt.savefig('img_gray_conv2d_leaky_relu.jpg')
+plt.savefig('img_gray_conv2d_leakyrelu_maxpooling.jpg')
 plt.show()
