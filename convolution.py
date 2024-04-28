@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 
-# np.random.seed(42)
+np.random.seed(42)
 
 img = cv2.imread('person.jpeg')
 # print(img.shape)
@@ -13,23 +13,23 @@ img = cv2.resize(img,(200,200))
 
 # Convert color to grayscale
 img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)/255
-print(img_gray.shape)
+# print(img_gray.shape)
 
 class Conv2d:
-    def __init__(self, input, kernel_size, padding=0, stride=1):
+    def __init__(self, input, numOfKernel=8, kernel_size=3, padding=0, stride=1):
         # self.input = input
         self.input = np.pad(input, ((padding,padding),(padding,padding)),'constant')
         self.stride = stride
         # Random kernel value
-        self.kernel = np.random.randn(kernel_size, kernel_size)  
-        print(self.kernel)
+        self.kernel = np.random.randn(numOfKernel, kernel_size, kernel_size)  
+        print(self.kernel.shape)
         # Initialize the result matrix
-        # print(int((input.shape[0] - kernel_size)/stride))
-        # print(int((input.shape[1] - kernel_size)/stride))
-        self.result = np.zeros(
+        # There is a number of kernels, we need to update something
+        self.result = np.zeros( 
                                 (   
                                     int((self.input.shape[0] - kernel_size)/stride) + 1, 
-                                    int((self.input.shape[1] - kernel_size)/stride) + 1
+                                    int((self.input.shape[1] - kernel_size)/stride) + 1,
+                                    self.kernel.shape[0]
                                 )
                             )
 
@@ -39,32 +39,52 @@ class Conv2d:
     #         result[row,col] = np.sum(input[row: row + kernel_size, col:col + kernel_size] * kernel)
 
     # Refactor code
-    def getROI(self):
-        kernel_row = self.kernel.shape[0]
-        kernel_col = self.kernel.shape[1]
-        for row in range(0, int((self.input.shape[0]-kernel_row)/self.stride) + 1):
-            for col in range(0, int((self.input.shape[1]-kernel_col)/self.stride) + 1):
-                roi = self.input[row * self.stride: row * self.stride + kernel_row, 
-                                 col* self.stride: col* self.stride + kernel_col]
+    def getROI(self): 
+        kernel_size = self.kernel.shape[1]
+        for row in range(0, int((self.input.shape[0]-kernel_size)/self.stride) + 1):
+            for col in range(0, int((self.input.shape[1]-kernel_size)/self.stride) + 1):
+                roi = self.input[row * self.stride: row * self.stride + kernel_size, 
+                                 col* self.stride: col* self.stride + kernel_size]
                 # Cannot use return, it will end the function
                 # return row, col, roi
                 yield row, col, roi
 
     def operate(self):
-        for row, col, roi in self.getROI( ):
-            self.result[row,col] = np.sum(roi * self.kernel)
+        # Loop through the number of kernels
+        for layer in range(self.kernel.shape[0]):
+            for row, col, roi in self.getROI( ):
+                # image shape format: (width, height, layer_size)
+                self.result[row,col, layer] = np.sum(roi * self.kernel[layer, :, :])
         return self.result
 
 class Relu:
     def __init__(self, input):
         self.input = input
-        self.result = np.zeros((self.input.shape[0], self.input.shape[1]))
+        # width, height, shape
+        self.result = np.zeros((self.input.shape[0], self.input.shape[1], self.input.shape[2]))
 
     def operate(self):
-        for row in range(self.input.shape[0]):
-            for col in range(self.input.shape[1]):
-                # relu formula
-                self.result[row,col] = 0 if self.input[row,col] < 0 else self.input[row,col]
+        # Loop through the number of kernels
+        for layer in range(self.input.shape[2]):
+            for row in range(self.input.shape[0]):
+                for col in range(self.input.shape[1]):
+                    # relu formula
+                    self.result[row,col,layer] = 0 if self.input[row,col, layer]  < 0 else self.input[row,col, layer]
+        return self.result
+
+class LeakyRelu:
+    def __init__(self, input):
+        self.input = input
+        # width, height, shape
+        self.result = np.zeros((self.input.shape[0], self.input.shape[1], self.input.shape[2]))
+
+    def operate(self):
+        # Loop through the number of kernels
+        for layer in range(self.input.shape[2]):
+            for row in range(self.input.shape[0]):
+                for col in range(self.input.shape[1]):
+                    # relu formula
+                    self.result[row,col,layer] = 0.1 * self.input[row,col, layer] if self.input[row,col, layer]  < 0 else self.input[row,col, layer]
         return self.result
 
 # # conv2d = Conv2d(img_gray,3,2,1)
@@ -82,13 +102,38 @@ class Relu:
 # # print(img_gray_conv2d.shape)
 # plt.show()
 
-for i in range(9):
-    conv2d = Conv2d(img_gray, 3, padding=2, stride=i+1)
-    img_gray_conv2d = conv2d.operate()
-    conv2d_relu = Relu(img_gray_conv2d)
-    img_gray_conv2d_relu = conv2d_relu.operate()
+# # Create 9 pictures
+# for i in range(9):
+#     conv2d = Conv2d(img_gray, 3, padding=2, stride=1)
+#     img_gray_conv2d = conv2d.operate()
+#     conv2d_relu = Relu(img_gray_conv2d)
+#     img_gray_conv2d_relu = conv2d_relu.operate()
 
-    plt.subplot(3, 3 , i+ 1)
-    plt.imshow(img_gray_conv2d_relu, cmap='gray')
+#     plt.subplot(3, 3 , i+ 1)
+#     plt.imshow(img_gray_conv2d_relu, cmap='gray')
     
+# plt.show()
+
+# conv2d = Conv2d(img_gray, numOfKernel=8, kernel_size=3, padding=0, stride=1)
+# conv2d = Conv2d(img_gray, numOfKernel=16, kernel_size=3, padding=0, stride=1)
+# img_gray_conv2d = conv2d.operate()
+
+
+# for i in range(16):
+#     plt.subplot(4, 4, i + 1)
+#     plt.imshow(img_gray_conv2d[:, :, i], cmap='gray')
+#     plt.axis('off')
+# plt.savefig('img_gray_conv2d.jpg') 
+# plt.show()
+
+conv2d = Conv2d(img_gray, numOfKernel=16, kernel_size=3, padding=0, stride=1)
+img_gray_conv2d = conv2d.operate()
+img_gray_conv2d_relu = Relu(img_gray_conv2d).operate()
+img_gray_conv2d_leaky_relu = LeakyRelu(img_gray_conv2d).operate()
+
+for i in range(16):
+    plt.subplot(4, 4, i + 1)
+    plt.imshow(img_gray_conv2d_leaky_relu[:, :, i], cmap='gray')
+    plt.axis('off')
+plt.savefig('img_gray_conv2d_leaky_relu.jpg')
 plt.show()
